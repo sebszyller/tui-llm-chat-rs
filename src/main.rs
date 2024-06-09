@@ -11,7 +11,12 @@ mod chat;
 //use tui_textarea::{Input, Key, TextArea};
 
 fn main() {
-    let llm_chat = chat::Chat::new(19);
+    let mut llm_chat = chat::Chat::new(19);
+    llm_chat.add_user_msg("user 1");
+    llm_chat.add_assistant_msg("assistant 1");
+
+    llm_chat.add_user_msg("user 2");
+    llm_chat.add_assistant_msg("assistant 2");
     println!("{}", llm_chat.generate());
 }
 //fn main() -> io::Result<()> {

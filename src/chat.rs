@@ -13,16 +13,15 @@ pub struct Chat {
 impl Chat {
     pub fn new(model: u8) -> Chat {
         Chat {
-            message_history: vec![MessagePair {
-                user: "user1".to_string(),
-                assistant: "ass1".to_string(),
-            }],
+            message_history: vec![],
             model: model,
         }
     }
 
     pub fn generate(&self) -> String {
-        return format!("MODEL: {} PROMPT: {}", self.model, &self.build_prompt());
+        let mstr = &self.model.to_string();
+        let prompt = &self.build_prompt();
+        return format!("MODEL: {mstr}\nPROMPT:\n{prompt}");
     }
 
     pub fn add_user_msg(&mut self, msg: &str) {
@@ -38,10 +37,24 @@ impl Chat {
     }
 
     fn build_prompt(&self) -> String {
-        let mut text = "".to_string();
-        for MessagePair { user, assistant } in self.message_history.iter() {
-            text = format!("{}\nUser: {}\nAssistant: {}", text, user, assistant);
+        // hardcoded for llama3 https://llama.meta.com/docs/model-cards-and-prompt-formats/meta-llama-3/
+        let system_prefix = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>";
+        let user_prefix = "<|start_header_id|>user<|end_header_id|>";
+        let assistant_prefix = "<|start_header_id|>assistant<|end_header_id|>";
+        let end_tag = "<|eot_id|>";
+        let system = format!("{system_prefix}\nYou're a helpful chatbot that is always to the point, doesn't beat around the bush, and admits when it doesn't know a topic well.{end_tag}\n");
+
+        assert!(self.message_history.len() > 0);
+        let mut text = system;
+        for MessagePair { user, assistant } in
+            self.message_history[..self.message_history.len() - 1].iter()
+        {
+            text = format!(
+                "{text}{user_prefix}\n{user}{end_tag}{assistant_prefix}\n{assistant}{end_tag}"
+            );
         }
+        let MessagePair { user, .. } = self.message_history.last().unwrap();
+        text = format!("{text}{user_prefix}\n{user}{end_tag}{assistant_prefix}\n");
         text
     }
 }
