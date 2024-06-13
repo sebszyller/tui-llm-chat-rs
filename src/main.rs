@@ -15,8 +15,10 @@ fn main() {
     env_logger::init();
 
     let path_to_model = "mistral-7b-instruct-v0.2.Q5_K_M.gguf";
-    let llm = model::LLM::new(path_to_model, 0.9, 1.0, 512);
-    let chat = chat::Chat::new(&llm);
+    let system = "You're a helpful chatbot that gives succint answers.";
+
+    let mut llm = model::LLM::new(path_to_model, 0.9, 1.0, 512);
+    let mut chat = chat::Chat::new(&mut llm, system);
     test(chat);
 }
 
@@ -32,17 +34,6 @@ fn test(mut chat: chat::Chat) {
 
     chat.clear();
 }
-//fn main() {
-//    let llm = model::ChatLLM::new(4, 0.9, 1.0, 512);
-//    let mut llm_chat = chat::Chat::new(&llm);
-//
-//    llm_chat.add_user_msg("user 1");
-//    llm_chat.add_assistant_msg("assistant 1");
-//
-//    llm_chat.add_user_msg("user 2");
-//    llm_chat.add_assistant_msg("assistant 2");
-//    println!("{}", llm_chat.generate());
-//}
 //fn main() -> io::Result<()> {
 //let stdout = io::stdout();
 //let mut stdout = stdout.lock();

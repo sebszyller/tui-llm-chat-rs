@@ -7,13 +7,15 @@ pub struct MessagePair {
 }
 
 pub struct Chat<'a> {
+    system: String,
     message_history: Vec<MessagePair>,
-    model: &'a model::LLM,
+    model: &'a mut model::LLM,
 }
 
 impl<'a> Chat<'a> {
-    pub fn new(model: &'a model::LLM) -> Chat<'a> {
+    pub fn new(model: &'a mut model::LLM, system: &str) -> Chat<'a> {
         Self {
+            system: system.to_owned(),
             message_history: vec![],
             model,
         }
@@ -23,21 +25,21 @@ impl<'a> Chat<'a> {
         self.message_history = vec![];
     }
 
-    pub fn generate(&self) -> String {
+    pub fn generate(&mut self) -> String {
         let prompt = self.build_prompt();
         return self.model.generate_stream(&prompt);
     }
 
     pub fn add_user_msg(&mut self, msg: &str) {
         self.message_history.push(MessagePair {
-            user: msg.to_string(),
+            user: msg.to_owned(),
             maybe_assistant: None,
         });
     }
 
     pub fn add_assistant_msg(&mut self, msg: &str) {
         let pair = self.message_history.last_mut().unwrap();
-        pair.maybe_assistant = Some(msg.to_string());
+        pair.maybe_assistant = Some(msg.to_owned());
     }
 
     fn build_prompt(&self) -> String {
@@ -47,8 +49,7 @@ impl<'a> Chat<'a> {
         let sent_end = "</s>";
         let inst_start = "[INST]";
         let inst_end = "[/INST]";
-        let system = "You're a helpful chatbot that gives succint answers.";
-        let mut text = format!("{sent_start}{inst_start} {system}");
+        let mut text = format!("{sent_start}{inst_start} {}", self.system);
         for (
             i,
             MessagePair {
@@ -57,16 +58,13 @@ impl<'a> Chat<'a> {
             },
         ) in self.message_history.iter().enumerate()
         {
-            if i == 0 {
-                text = format!(
-                    "{text} {user} {inst_end} {}{sent_end}",
-                    maybe_assistant.as_ref().unwrap()
-                );
+            text = if i == 0 {
+                format!("{text} {user} {inst_end} ")
             } else {
-                text = format!("{text} {inst_start} {user} {inst_end} ");
-                if let Some(assistant) = maybe_assistant {
-                    text = format!("{text}{assistant}{sent_end}");
-                }
+                format!("{text} {inst_start} {user} {inst_end} ")
+            };
+            if let Some(assistant) = maybe_assistant {
+                text = format!("{text}{assistant}{sent_end}");
             }
         }
         debug!("{text}");
