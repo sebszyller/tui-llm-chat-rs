@@ -1,5 +1,7 @@
 mod chat;
+mod model;
 
+use env_logger;
 //use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 //use crossterm::terminal::{
 //    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -9,16 +11,38 @@ mod chat;
 //use ratatui::Terminal;
 //use std::io;
 //use tui_textarea::{Input, Key, TextArea};
-
 fn main() {
-    let mut llm_chat = chat::Chat::new(19);
-    llm_chat.add_user_msg("user 1");
-    llm_chat.add_assistant_msg("assistant 1");
+    env_logger::init();
 
-    llm_chat.add_user_msg("user 2");
-    llm_chat.add_assistant_msg("assistant 2");
-    println!("{}", llm_chat.generate());
+    let path_to_model = "mistral-7b-instruct-v0.2.Q5_K_M.gguf";
+    let llm = model::LLM::new(path_to_model, 0.9, 1.0, 512);
+    let chat = chat::Chat::new(&llm);
+    test(chat);
 }
+
+fn test(mut chat: chat::Chat) {
+    chat.add_user_msg("tell me (BRIEFLY!) about NYC");
+    chat.add_assistant_msg("nyc is great");
+    chat.add_user_msg("how come?");
+    chat.add_assistant_msg("just is");
+    chat.add_user_msg("give me one good example");
+
+    let response = chat.generate();
+    chat.add_assistant_msg(&response);
+
+    chat.clear();
+}
+//fn main() {
+//    let llm = model::ChatLLM::new(4, 0.9, 1.0, 512);
+//    let mut llm_chat = chat::Chat::new(&llm);
+//
+//    llm_chat.add_user_msg("user 1");
+//    llm_chat.add_assistant_msg("assistant 1");
+//
+//    llm_chat.add_user_msg("user 2");
+//    llm_chat.add_assistant_msg("assistant 2");
+//    println!("{}", llm_chat.generate());
+//}
 //fn main() -> io::Result<()> {
 //let stdout = io::stdout();
 //let mut stdout = stdout.lock();
