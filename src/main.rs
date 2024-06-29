@@ -20,10 +20,9 @@ fn main() -> io::Result<()> {
 
     let llm = model::LLM::new(path_to_model, 0.9, 1.0, 512);
     let chat = chat::Chat::new(llm, system);
-    //test(chat);
+    let mut app = app::App::init(chat);
 
     let mut terminal = init()?;
-    let mut app = app::App::init(chat);
     app.run(&mut terminal)?;
     restore()
 }
@@ -35,7 +34,7 @@ fn init() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
     Terminal::with_options(
         backend,
         ratatui::TerminalOptions {
-            viewport: ratatui::Viewport::Inline(20),
+            viewport: ratatui::Viewport::Fullscreen,
         },
     )
 }

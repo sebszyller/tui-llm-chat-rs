@@ -21,28 +21,29 @@ pub enum UIEvent {
 
 pub struct App<'a> {
     chat: chat::Chat,
-    statefuL_ui: ui::StatefulUI<'a>,
+    stateful_ui: ui::StatefulUI<'a>,
 }
 
 impl<'a> App<'a> {
     pub fn init(chat: chat::Chat) -> App<'a> {
         Self {
             chat,
-            statefuL_ui: ui::StatefulUI::init(),
+            stateful_ui: ui::StatefulUI::init(),
         }
     }
 
     pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> io::Result<()> {
         loop {
-            let _ = terminal.draw(|frame| self.statefuL_ui.draw_ui(frame));
+            let _ = terminal.draw(|frame| self.stateful_ui.draw_ui(frame));
             match App::handle_events()? {
                 UIEvent::Exit => break,
                 UIEvent::Idle => continue,
-                UIEvent::Clear => self.statefuL_ui.clear(),
-                UIEvent::KeyInput(key) => self.statefuL_ui.update_state(key),
+                UIEvent::Clear => self.stateful_ui.clear(),
+                UIEvent::KeyInput(key) => self.stateful_ui.update_text_area_state(key),
                 UIEvent::Submit => {
-                    let _lines = self.statefuL_ui.lines();
-                    self.statefuL_ui.clear();
+                    let lines = self.stateful_ui.lines();
+                    self.stateful_ui.clear();
+                    self.progress_chat(&lines);
                 }
                 UIEvent::CopyOutput => continue, // TODO: fixme
                 UIEvent::ScrollUp => continue,   // TODO: fixme
@@ -50,6 +51,13 @@ impl<'a> App<'a> {
             }
         }
         Ok(())
+    }
+
+    fn progress_chat(&mut self, lines: &Vec<String>) {
+        let new_output = lines
+            .iter()
+            .fold("".to_string(), |acc, line| format!("{acc} {line}"));
+        self.stateful_ui.update_output_state(new_output);
     }
 
     fn handle_events() -> io::Result<UIEvent> {
