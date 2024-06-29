@@ -6,14 +6,14 @@ pub struct MessagePair {
     maybe_assistant: Option<String>,
 }
 
-pub struct Chat<'a> {
+pub struct Chat {
     system: String,
     message_history: Vec<MessagePair>,
-    model: &'a mut model::LLM,
+    model: model::LLM,
 }
 
-impl<'a> Chat<'a> {
-    pub fn new(model: &'a mut model::LLM, system: &str) -> Chat<'a> {
+impl Chat {
+    pub fn new(model: model::LLM, system: &str) -> Chat {
         Self {
             system: system.to_owned(),
             message_history: vec![],
