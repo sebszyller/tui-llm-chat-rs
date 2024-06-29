@@ -50,10 +50,11 @@ fn restore() -> io::Result<()> {
 
 fn app_loop(terminal: &mut Tui) -> io::Result<()> {
     let mut should_quit = false;
-    let mut maybe_key: Option<KeyEvent> = None;
+    let mut maybe_key: Option<KeyEvent>;
+    let mut stateful_ui = ui::StatefulUI::init();
     while !should_quit {
         (maybe_key, should_quit) = events::handle_events()?;
-        terminal.draw(|frame| ui::draw_ui(frame, maybe_key));
+        terminal.draw(|frame| stateful_ui.draw_ui(frame, maybe_key));
     }
     Ok(())
 }
