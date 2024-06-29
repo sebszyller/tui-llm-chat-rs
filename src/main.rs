@@ -49,12 +49,22 @@ fn restore() -> io::Result<()> {
 }
 
 fn app_loop(terminal: &mut Tui) -> io::Result<()> {
-    let mut should_quit = false;
-    let mut maybe_key: Option<KeyEvent>;
     let mut stateful_ui = ui::StatefulUI::init();
-    while !should_quit {
-        (maybe_key, should_quit) = events::handle_events()?;
-        terminal.draw(|frame| stateful_ui.draw_ui(frame, maybe_key));
+    loop {
+        let _ = terminal.draw(|frame| stateful_ui.draw_ui(frame));
+        match events::handle_events()? {
+            events::UIEvent::Exit => break,
+            events::UIEvent::Poll => continue,
+            events::UIEvent::Clear => stateful_ui.clear(),
+            events::UIEvent::PassKey(key) => stateful_ui.update_state(key),
+            events::UIEvent::Submit => {
+                let _lines = stateful_ui.lines();
+                stateful_ui.clear();
+            }
+            events::UIEvent::CopyOutput => continue, // TODO: fixme
+            events::UIEvent::ScrollUp => continue,
+            events::UIEvent::ScrollDown => continue,
+        }
     }
     Ok(())
 }
