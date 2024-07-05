@@ -2,7 +2,7 @@ use crossterm::event::KeyEvent;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::prelude::Frame;
 use ratatui::widgets::block::{Position, Title};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui_textarea::{CursorMove, TextArea};
 
 pub struct StatefulUI<'a> {
@@ -21,9 +21,9 @@ impl<'a> StatefulUI<'a> {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
-        //.split(frame.size());
 
         let output = StatefulUI::build_paragaph("Go on bruv...".to_string());
+
         let mut text_area = TextArea::default();
         text_area.set_placeholder_text("Enter prompt...");
         text_area.set_block(
@@ -53,7 +53,9 @@ impl<'a> StatefulUI<'a> {
     }
 
     fn build_paragaph(text: String) -> Paragraph<'a> {
-        Paragraph::new(text).block(Block::default().borders(Borders::ALL))
+        Paragraph::new(text)
+            .block(Block::default().borders(Borders::ALL))
+            .wrap(Wrap { trim: false })
     }
 
     pub fn draw_ui(&self, frame: &mut Frame) {
@@ -66,8 +68,8 @@ impl<'a> StatefulUI<'a> {
         self.text_area.input(key);
     }
 
-    pub fn update_output_state(&mut self, new_output: String) {
-        self.output = StatefulUI::build_paragaph(new_output);
+    pub fn update_output_state(&mut self, new_output: &str) {
+        self.output = StatefulUI::build_paragaph(new_output.to_string());
     }
 
     pub fn lines(&self) -> Vec<String> {
@@ -77,6 +79,7 @@ impl<'a> StatefulUI<'a> {
     pub fn clear(&mut self) {
         self.text_area.move_cursor(CursorMove::End);
         self.text_area.delete_line_by_head();
+        self.update_output_state("");
     }
 
     //pub fn copy_latest_output(self) {

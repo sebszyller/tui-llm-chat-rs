@@ -38,26 +38,33 @@ impl<'a> App<'a> {
             match App::handle_events()? {
                 UIEvent::Exit => break,
                 UIEvent::Idle => continue,
-                UIEvent::Clear => self.stateful_ui.clear(),
+                UIEvent::Clear => {
+                    self.chat.clear();
+                    self.stateful_ui.clear();
+                }
                 UIEvent::KeyInput(key) => self.stateful_ui.update_text_area_state(key),
                 UIEvent::Submit => {
                     let lines = self.stateful_ui.lines();
                     self.stateful_ui.clear();
                     self.progress_chat(&lines);
                 }
-                UIEvent::CopyOutput => continue, // TODO: fixme
-                UIEvent::ScrollUp => continue,   // TODO: fixme
-                UIEvent::ScrollDown => continue, // TODO: fixme
+                UIEvent::CopyOutput => continue, // TODO: tui scroll view
+                UIEvent::ScrollUp => continue,   // TODO: tui scroll view
+                UIEvent::ScrollDown => continue, // TODO: tui scroll view
             }
         }
         Ok(())
     }
 
     fn progress_chat(&mut self, lines: &Vec<String>) {
-        let new_output = lines
+        let input = lines
             .iter()
-            .fold("".to_string(), |acc, line| format!("{acc} {line}"));
-        self.stateful_ui.update_output_state(new_output);
+            .fold("".to_string(), |acc, line| format!("{acc} {line}\n"));
+
+        self.chat.add_user_msg(&input);
+        let output = self.chat.generate();
+        self.chat.add_assistant_msg(&output);
+        self.stateful_ui.update_output_state(&output);
     }
 
     fn handle_events() -> io::Result<UIEvent> {

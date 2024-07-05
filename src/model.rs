@@ -1,5 +1,6 @@
 use llama_cpp::{
-    standard_sampler::StandardSampler, LlamaModel, LlamaParams, LlamaSession, SessionParams,
+    standard_sampler::StandardSampler, LlamaContextError, LlamaModel, LlamaParams, LlamaSession,
+    SessionParams,
 };
 use log::debug;
 use std::io::{self, Write};
@@ -27,7 +28,7 @@ impl LLM {
         }
     }
 
-    pub fn generate_stream(&mut self, prompt: &str) -> String {
+    pub fn generate_stream(&mut self, prompt: &str) -> Result<String, LlamaContextError> {
         debug!(
             "Generating with temp: {} | top_p: {} | max_new_tokens: {} | for prompt:\n{}",
             self.temperature, self.top_p, self.max_new_tokens, prompt
@@ -35,16 +36,15 @@ impl LLM {
         let mut accum = "".to_owned();
         let mut decoded_tokens = 0;
 
-        self.session.advance_context(prompt).unwrap();
+        self.session.advance_context(prompt)?;
 
         let completions = self
             .session
-            .start_completing_with(StandardSampler::default(), self.max_new_tokens)
-            .unwrap()
+            .start_completing_with(StandardSampler::default(), self.max_new_tokens)?
             .into_strings();
 
         for completion in completions {
-            print!("{completion}");
+            //print!("{completion}");
             let _ = io::stdout().flush();
 
             decoded_tokens += 1;
@@ -53,6 +53,6 @@ impl LLM {
                 break;
             }
         }
-        accum
+        Ok(accum)
     }
 }

@@ -9,19 +9,25 @@ use crossterm::{
 };
 use env_logger;
 use ratatui::prelude::{CrosstermBackend, Terminal};
-
 use std::io::{self, stdout, Stdout};
+use tracing;
+use tracing_subscriber::FmtSubscriber;
 
 fn main() -> io::Result<()> {
     env_logger::init();
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(tracing::Level::ERROR)
+        .finish();
 
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
     let path_to_model = "mistral-7b-instruct-v0.2.Q5_K_M.gguf";
     let system = "You're a helpful chatbot that gives succint answers.";
 
     let llm = model::LLM::new(path_to_model, 0.9, 1.0, 512);
     let chat = chat::Chat::new(llm, system);
+    //test(chat);
+    //Ok(())
     let mut app = app::App::init(chat);
-
     let mut terminal = init()?;
     app.run(&mut terminal)?;
     restore()
@@ -34,7 +40,7 @@ fn init() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
     Terminal::with_options(
         backend,
         ratatui::TerminalOptions {
-            viewport: ratatui::Viewport::Fullscreen,
+            viewport: ratatui::Viewport::Inline(40),
         },
     )
 }
@@ -50,10 +56,15 @@ fn test(mut chat: chat::Chat) {
     chat.add_assistant_msg("nyc is great");
     chat.add_user_msg("how come?");
     chat.add_assistant_msg("just is");
-    chat.add_user_msg("give me one good example");
+    chat.add_user_msg("give me lots of good examples");
 
     let response = chat.generate();
     chat.add_assistant_msg(&response);
+
+    chat.add_user_msg("even more examples tell me a lot");
+
+    let response2 = chat.generate();
+    chat.add_assistant_msg(&response2);
 
     chat.clear();
 }

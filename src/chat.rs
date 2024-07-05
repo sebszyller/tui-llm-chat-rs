@@ -1,11 +1,25 @@
 use crate::model;
 use log::debug;
+use std::fmt;
 
+#[derive(Debug)]
 pub struct MessagePair {
     user: String,
     maybe_assistant: Option<String>,
 }
 
+impl fmt::Display for MessagePair {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "user: {}, maybe_assistant: {}",
+            self.user,
+            self.maybe_assistant
+                .clone()
+                .unwrap_or("__NONE__".to_string())
+        )
+    }
+}
 pub struct Chat {
     system: String,
     message_history: Vec<MessagePair>,
@@ -27,7 +41,10 @@ impl Chat {
 
     pub fn generate(&mut self) -> String {
         let prompt = self.build_prompt();
-        return self.model.generate_stream(&prompt);
+        match self.model.generate_stream(&prompt) {
+            Ok(response) => response,
+            Err(_) => "Cannot generate anymore; clear!".to_string(),
+        }
     }
 
     pub fn add_user_msg(&mut self, msg: &str) {
