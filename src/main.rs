@@ -27,9 +27,8 @@ fn main() -> io::Result<()> {
     let chat = chat::Chat::new(llm, system);
     //test(chat);
     //Ok(())
-    let mut app = app::App::init(chat);
     let mut terminal = init()?;
-    app.run(&mut terminal)?;
+    app::App::init(chat).run(&mut terminal)?;
     restore()
 }
 

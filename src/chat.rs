@@ -20,6 +20,7 @@ impl fmt::Display for MessagePair {
         )
     }
 }
+
 pub struct Chat {
     system: String,
     message_history: Vec<MessagePair>,

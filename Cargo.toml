@@ -9,7 +9,7 @@ crossterm = "0.27.0"
 llama_cpp = { version = "0.3.2", features = ["metal"] }
 log = "0.4.21"
 env_logger = "0.11.3"
-ratatui = { version = "0.26.3" }
+ratatui = { version = "0.26.3", features = ["unstable-rendered-line-info"] }
 tui-scrollview = "0.3.6"
 tui-textarea = "0.4.0"
 tracing = "0.1.40"

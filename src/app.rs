@@ -40,17 +40,18 @@ impl<'a> App<'a> {
                 UIEvent::Idle => continue,
                 UIEvent::Clear => {
                     self.chat.clear();
-                    self.stateful_ui.clear();
+                    self.stateful_ui.clear_input();
+                    self.stateful_ui.clear_output();
                 }
                 UIEvent::KeyInput(key) => self.stateful_ui.update_text_area_state(key),
                 UIEvent::Submit => {
                     let lines = self.stateful_ui.lines();
-                    self.stateful_ui.clear();
+                    self.stateful_ui.clear_input();
                     self.progress_chat(&lines);
                 }
-                UIEvent::CopyOutput => continue, // TODO: tui scroll view
-                UIEvent::ScrollUp => continue,   // TODO: tui scroll view
-                UIEvent::ScrollDown => continue, // TODO: tui scroll view
+                UIEvent::CopyOutput => self.stateful_ui.copy_latest_output(),
+                UIEvent::ScrollUp => self.stateful_ui.scroll_up(),
+                UIEvent::ScrollDown => self.stateful_ui.scroll_down(),
             }
         }
         Ok(())
@@ -62,9 +63,10 @@ impl<'a> App<'a> {
             .fold("".to_string(), |acc, line| format!("{acc} {line}\n"));
 
         self.chat.add_user_msg(&input);
+        self.stateful_ui.add_output_lines(&input, ui::Side::Right);
         let output = self.chat.generate();
         self.chat.add_assistant_msg(&output);
-        self.stateful_ui.update_output_state(&output);
+        self.stateful_ui.add_output_lines(&output, ui::Side::Left);
     }
 
     fn handle_events() -> io::Result<UIEvent> {
@@ -74,8 +76,8 @@ impl<'a> App<'a> {
                     match key.code {
                         KeyCode::Esc => return Ok(UIEvent::Exit),
                         KeyCode::Enter => return Ok(UIEvent::Submit),
-                        KeyCode::PageUp => return Ok(UIEvent::ScrollUp),
-                        KeyCode::PageDown => return Ok(UIEvent::ScrollDown),
+                        KeyCode::Up => return Ok(UIEvent::ScrollUp),
+                        KeyCode::Down => return Ok(UIEvent::ScrollDown),
                         KeyCode::Char(c) => {
                             if key.modifiers.contains(KeyModifiers::CONTROL) {
                                 match c {
