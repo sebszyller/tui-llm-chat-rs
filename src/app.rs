@@ -1,14 +1,17 @@
-use crate::chat;
+use crate::model;
+use crate::state;
 use crate::ui;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use llama_cpp::CompletionHandle;
+use llama_cpp::TokensToStrings;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
 use std::io::Stdout;
 
-pub enum UIEvent {
+pub enum AppEvent {
     Exit,
     Idle,
     Clear,
@@ -20,80 +23,89 @@ pub enum UIEvent {
 }
 
 pub struct App<'a> {
-    chat: chat::Chat,
-    stateful_ui: ui::StatefulUI<'a>,
+    state: state::State,
+    llm: model::LLM,
+    ui: ui::UI<'a>,
 }
 
 impl<'a> App<'a> {
-    pub fn init(chat: chat::Chat) -> App<'a> {
+    pub fn init(state: state::State, llm: model::LLM) -> App<'a> {
         Self {
-            chat,
-            stateful_ui: ui::StatefulUI::init(),
+            state,
+            llm,
+            ui: ui::UI::init(),
         }
     }
 
     pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> io::Result<()> {
+        let mut generating = false;
+        let mut completions: Option<TokensToStrings<CompletionHandle>> = None;
         loop {
-            let _ = terminal.draw(|frame| self.stateful_ui.draw_ui(frame));
-            match App::handle_events()? {
-                UIEvent::Exit => break,
-                UIEvent::Idle => continue,
-                UIEvent::Clear => {
-                    self.chat.clear();
-                    self.stateful_ui.clear_input();
-                    self.stateful_ui.clear_output();
+            let _ = terminal.draw(|frame| self.ui.draw_ui(frame, &self.state.message_history));
+            if generating {
+                if let Some(ref mut comp) = completions {
+                    match comp.next() {
+                        Some(partial_output) => self.state.add_assistant_msg(&partial_output),
+                        None => generating = false,
+                    }
                 }
-                UIEvent::KeyInput(key) => self.stateful_ui.update_text_area_state(key),
-                UIEvent::Submit => {
-                    let lines = self.stateful_ui.lines();
-                    self.stateful_ui.clear_input();
-                    self.progress_chat(&lines);
+            } else {
+                match Self::key_as_event()? {
+                    AppEvent::Exit => break,
+                    AppEvent::Idle => continue,
+                    AppEvent::Clear => {
+                        self.llm.clear_session().expect("Failed to clear session!");
+                        self.state.clear();
+                        self.ui.clear_input();
+                    }
+                    AppEvent::KeyInput(key) => self.ui.update_text_area_state(key),
+                    AppEvent::Submit => {
+                        let input = self.ui.lines();
+                        self.ui.clear_input();
+                        self.state.add_user_msg(&input);
+                        completions = Some(self.start_stream());
+                        generating = true;
+                    }
+                    AppEvent::CopyOutput => self.ui.copy_latest_output(),
+                    AppEvent::ScrollUp => self.ui.scroll_up(),
+                    AppEvent::ScrollDown => self.ui.scroll_down(),
                 }
-                UIEvent::CopyOutput => self.stateful_ui.copy_latest_output(),
-                UIEvent::ScrollUp => self.stateful_ui.scroll_up(),
-                UIEvent::ScrollDown => self.stateful_ui.scroll_down(),
             }
         }
         Ok(())
     }
 
-    fn progress_chat(&mut self, lines: &Vec<String>) {
-        let input = lines
-            .iter()
-            .fold("".to_string(), |acc, line| format!("{acc} {line}\n"));
-
-        self.chat.add_user_msg(&input);
-        self.stateful_ui.add_output_lines(&input, ui::Side::Right);
-        let output = self.chat.generate();
-        self.chat.add_assistant_msg(&output);
-        self.stateful_ui.add_output_lines(&output, ui::Side::Left);
+    fn start_stream(&mut self) -> TokensToStrings<CompletionHandle> {
+        self.llm
+            .prepare_completion_handle(&self.state.message_history)
+            .unwrap()
     }
 
-    fn handle_events() -> io::Result<UIEvent> {
+    fn key_as_event() -> io::Result<AppEvent> {
         if event::poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == event::KeyEventKind::Press {
                     match key.code {
-                        KeyCode::Esc => return Ok(UIEvent::Exit),
-                        KeyCode::Enter => return Ok(UIEvent::Submit),
-                        KeyCode::Up => return Ok(UIEvent::ScrollUp),
-                        KeyCode::Down => return Ok(UIEvent::ScrollDown),
+                        KeyCode::Esc => return Ok(AppEvent::Exit),
+                        KeyCode::Enter => return Ok(AppEvent::Submit),
+                        KeyCode::Up => return Ok(AppEvent::ScrollUp),
+                        KeyCode::Down => return Ok(AppEvent::ScrollDown),
                         KeyCode::Char(c) => {
                             if key.modifiers.contains(KeyModifiers::CONTROL) {
                                 match c {
-                                    'x' => return Ok(UIEvent::Clear),
-                                    'y' => return Ok(UIEvent::CopyOutput),
-                                    _ => return Ok(UIEvent::Idle),
+                                    'x' => return Ok(AppEvent::Clear),
+                                    'y' => return Ok(AppEvent::CopyOutput),
+                                    _ => return Ok(AppEvent::Idle),
                                 }
                             } else {
-                                return Ok(UIEvent::KeyInput(key));
+                                return Ok(AppEvent::KeyInput(key));
                             }
                         }
-                        _ => return Ok(UIEvent::KeyInput(key)),
+                        _ => return Ok(AppEvent::KeyInput(key)),
                     }
                 }
             }
         }
-        Ok(UIEvent::Idle)
+        Ok(AppEvent::Idle)
     }
 }

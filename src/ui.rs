@@ -6,25 +6,18 @@ use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui_scrollview::{ScrollView, ScrollViewState};
 use tui_textarea::{CursorMove, TextArea};
 
-//https://github.com/joshka/tui-scrollview/blob/main/examples/scrollview.rs
-
-pub enum Side {
-    Left,
-    Right,
-}
-
-pub struct StatefulUI<'a> {
-    output_lines: Vec<(String, Side)>,
+pub struct UI<'a> {
     layout: Layout,
     scroll_view_state: ScrollViewState,
     text_area: TextArea<'a>,
+    chat_frame: Block<'a>,
 }
 
 const SINGLE_OFFSET: u16 = 1;
 const DOUBLE_OFFSET: u16 = SINGLE_OFFSET * 2;
 
-impl<'a> StatefulUI<'a> {
-    pub fn init() -> StatefulUI<'a> {
+impl<'a> UI<'a> {
+    pub fn init() -> UI<'a> {
         let title = "Mistral Instruct";
         let controls =
             "Scroll: <PgUp/PgDn> | Submit: <Enter> | Clear: <Ctrl+X> | Copy latest output: <Ctrl+Y>";
@@ -39,42 +32,44 @@ impl<'a> StatefulUI<'a> {
         text_area.set_block(
             Block::default()
                 .title(
-                    Title::from(title)
-                        .alignment(Alignment::Center)
-                        .position(Position::Top),
-                )
-                .title(
                     Title::from(controls)
                         .alignment(Alignment::Center)
                         .position(Position::Bottom),
                 )
-                .title(
-                    Title::from(exit)
-                        .alignment(Alignment::Left)
-                        .position(Position::Top),
-                )
                 .borders(Borders::ALL),
         );
 
+        let chat_frame = Block::default()
+            .title(
+                Title::from(title)
+                    .alignment(Alignment::Center)
+                    .position(Position::Top),
+            )
+            .title(
+                Title::from(exit)
+                    .alignment(Alignment::Left)
+                    .position(Position::Top),
+            )
+            .borders(Borders::ALL);
+
         let scroll_view_state = ScrollViewState::default();
-        let output_lines: Vec<(String, Side)> = vec![];
 
         Self {
-            output_lines,
             layout,
             scroll_view_state,
             text_area,
+            chat_frame,
         }
     }
 
     fn build_paragaph(text: String) -> Paragraph<'a> {
-        Paragraph::new(text)
+        Paragraph::new(text.to_string())
             .block(Block::default().borders(Borders::ALL))
             .wrap(Wrap { trim: false })
     }
 
-    pub fn draw_ui(&mut self, frame: &mut Frame) {
-        let split = &self.layout.split(frame.size());
+    pub fn draw_ui(&mut self, frame: &mut Frame, message_history: &Vec<(String, String)>) {
+        let split = self.layout.split(frame.size());
 
         let w = split[0].width;
         let h = split[0].height;
@@ -82,26 +77,43 @@ impl<'a> StatefulUI<'a> {
         let y = split[0].y;
 
         let box_width = ((w as f32) * 0.6) as u16;
-        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET, h * 10));
+        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET - SINGLE_OFFSET, 200)); // FIXME: compute height
 
         let mut last_line = 0;
-        for (txt, side) in self.output_lines.iter() {
-            let p = StatefulUI::build_paragaph(txt.to_string());
-            let lines_needed = p.line_count(box_width) as u16 + DOUBLE_OFFSET;
-            let xp = match side {
-                Side::Left => SINGLE_OFFSET,
-                Side::Right => w - box_width - DOUBLE_OFFSET - SINGLE_OFFSET,
-            };
-            scroll_view.render_widget(p, Rect::new(xp, last_line, box_width, lines_needed));
+        for (user, assistant) in message_history.iter() {
+            let lines_needed = Self::render_msg_bubble(
+                user,
+                &mut scroll_view,
+                w - box_width - DOUBLE_OFFSET - DOUBLE_OFFSET,
+                last_line,
+                box_width,
+            );
+            last_line = last_line + lines_needed;
+
+            let lines_needed = Self::render_msg_bubble(
+                assistant,
+                &mut scroll_view,
+                DOUBLE_OFFSET,
+                last_line,
+                box_width,
+            );
             last_line = last_line + lines_needed;
         }
+
         frame.render_widget(self.text_area.widget(), split[1]);
         frame.render_stateful_widget(
             scroll_view,
-            Rect::new(x, y + SINGLE_OFFSET, w - SINGLE_OFFSET, h - DOUBLE_OFFSET),
+            Rect::new(x, y + SINGLE_OFFSET, w - DOUBLE_OFFSET, h - DOUBLE_OFFSET),
             &mut self.scroll_view_state,
         );
-        frame.render_widget(Block::default().borders(Borders::all()), split[0]);
+        frame.render_widget(self.chat_frame.clone(), split[0]);
+    }
+
+    fn render_msg_bubble(txt: &str, scroll_view: &mut ScrollView, x: u16, y: u16, w: u16) -> u16 {
+        let p = Self::build_paragaph(txt.to_string());
+        let lines_needed = p.line_count(w) as u16 + DOUBLE_OFFSET;
+        scroll_view.render_widget(p, Rect::new(x, y, w, lines_needed));
+        lines_needed
     }
 
     pub fn update_text_area_state(&mut self, key: KeyEvent) {
@@ -109,28 +121,23 @@ impl<'a> StatefulUI<'a> {
     }
 
     pub fn scroll_up(&mut self) {
-        self.scroll_view_state.scroll_page_up();
+        self.scroll_view_state.scroll_up();
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll_view_state.scroll_page_down();
+        self.scroll_view_state.scroll_down();
     }
 
-    pub fn add_output_lines(&mut self, text: &str, side: Side) {
-        self.output_lines.push((text.to_string(), side));
-    }
-
-    pub fn lines(&self) -> Vec<String> {
-        self.text_area.lines().to_vec()
+    pub fn lines(&self) -> String {
+        self.text_area
+            .lines()
+            .iter()
+            .fold("".to_string(), |acc, line| format!("{acc} {line}\n"))
     }
 
     pub fn clear_input(&mut self) {
         self.text_area.move_cursor(CursorMove::End);
         self.text_area.delete_line_by_head();
-    }
-
-    pub fn clear_output(&mut self) {
-        self.output_lines = vec![];
     }
 
     pub fn copy_latest_output(&self) {
