@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+clap = "4.4.11"
 crossterm = "0.27.0"
 llama_cpp = { version = "0.3.2", features = ["metal"] }
 log = "0.4.21"
