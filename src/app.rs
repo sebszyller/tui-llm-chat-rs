@@ -16,7 +16,6 @@ pub enum AppEvent {
     Idle,
     Clear,
     KeyInput(KeyEvent),
-    CopyOutput,
     ScrollUp,
     ScrollDown,
     Submit,
@@ -70,7 +69,6 @@ impl<'a> App<'a> {
                         completions = self.start_stream();
                         generating = true;
                     }
-                    AppEvent::CopyOutput => self.ui.copy_latest_output(),
                     AppEvent::ScrollUp => self.ui.scroll_up(),
                     AppEvent::ScrollDown => self.ui.scroll_down(),
                 }
@@ -98,7 +96,6 @@ impl<'a> App<'a> {
                             if key.modifiers.contains(KeyModifiers::CONTROL) {
                                 match c {
                                     'x' => return Ok(AppEvent::Clear),
-                                    'y' => return Ok(AppEvent::CopyOutput),
                                     _ => return Ok(AppEvent::Idle),
                                 }
                             } else {

@@ -20,8 +20,7 @@ const DOUBLE_OFFSET: u16 = SINGLE_OFFSET * 2;
 impl<'a> UI<'a> {
     pub fn init() -> UI<'a> {
         let title = "Mistral Instruct";
-        let controls =
-            "Scroll: <PgUp/PgDn> | Submit: <Enter> | Clear: <Ctrl+X> | Copy latest output: <Ctrl+Y>";
+        let controls = "Scroll: <PgUp/PgDn> | Submit: <Enter> | Clear: <Ctrl+X>";
         let exit = "Quit: <Esc>";
 
         let layout = Layout::default()
@@ -153,9 +152,5 @@ impl<'a> UI<'a> {
     pub fn clear_input(&mut self) {
         self.text_area.move_cursor(CursorMove::End);
         self.text_area.delete_line_by_head();
-    }
-
-    pub fn copy_latest_output(&self) {
-        _ = "this is the latest output".to_string();
     }
 }
