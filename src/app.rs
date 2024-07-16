@@ -48,6 +48,10 @@ impl<'a> App<'a> {
                         Some(partial_output) => self.state.add_assistant_msg(&partial_output),
                         None => generating = false,
                     }
+                } else {
+                    self.state
+                        .add_assistant_msg("Context is full; clear to continue!");
+                    generating = false
                 }
             } else {
                 match Self::key_as_event()? {
@@ -63,7 +67,7 @@ impl<'a> App<'a> {
                         let input = self.ui.lines();
                         self.ui.clear_input();
                         self.state.add_user_msg(&input);
-                        completions = Some(self.start_stream());
+                        completions = self.start_stream();
                         generating = true;
                     }
                     AppEvent::CopyOutput => self.ui.copy_latest_output(),
@@ -75,10 +79,10 @@ impl<'a> App<'a> {
         Ok(())
     }
 
-    fn start_stream(&mut self) -> TokensToStrings<CompletionHandle> {
+    fn start_stream(&mut self) -> Option<TokensToStrings<CompletionHandle>> {
         self.llm
             .prepare_completion_handle(&self.state.message_history)
-            .unwrap()
+            .ok()
     }
 
     fn key_as_event() -> io::Result<AppEvent> {
