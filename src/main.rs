@@ -41,7 +41,7 @@ fn init() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
     Terminal::with_options(
         backend,
         ratatui::TerminalOptions {
-            viewport: ratatui::Viewport::Fullscreen,
+            viewport: ratatui::Viewport::Inline(40),
         },
     )
 }

@@ -1,6 +1,7 @@
 use crossterm::event::KeyEvent;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect, Size};
 use ratatui::prelude::Frame;
+use ratatui::style::{Style, Stylize};
 use ratatui::widgets::block::{Position, Title};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui_scrollview::{ScrollView, ScrollViewState};
@@ -62,10 +63,15 @@ impl<'a> UI<'a> {
         }
     }
 
-    fn build_paragaph(text: String) -> Paragraph<'a> {
+    fn build_paragaph(text: String, use_blue: bool) -> Paragraph<'a> {
+        let style = if use_blue {
+            Style::new().blue()
+        } else {
+            Style::new().yellow()
+        };
         Paragraph::new(text.to_string())
-            .block(Block::default().borders(Borders::ALL))
-            .wrap(Wrap { trim: false })
+            .wrap(Wrap { trim: true })
+            .block(Block::default().borders(Borders::ALL).border_style(style))
     }
 
     pub fn draw_ui(&mut self, frame: &mut Frame, message_history: &Vec<(String, String)>) {
@@ -83,6 +89,7 @@ impl<'a> UI<'a> {
         for (user, assistant) in message_history.iter() {
             let lines_needed = Self::render_msg_bubble(
                 user,
+                true,
                 &mut scroll_view,
                 w - box_width - DOUBLE_OFFSET - DOUBLE_OFFSET,
                 last_line,
@@ -92,6 +99,7 @@ impl<'a> UI<'a> {
 
             let lines_needed = Self::render_msg_bubble(
                 assistant,
+                false,
                 &mut scroll_view,
                 DOUBLE_OFFSET,
                 last_line,
@@ -109,8 +117,15 @@ impl<'a> UI<'a> {
         frame.render_widget(self.chat_frame.clone(), split[0]);
     }
 
-    fn render_msg_bubble(txt: &str, scroll_view: &mut ScrollView, x: u16, y: u16, w: u16) -> u16 {
-        let p = Self::build_paragaph(txt.to_string());
+    fn render_msg_bubble(
+        txt: &str,
+        use_blue: bool,
+        scroll_view: &mut ScrollView,
+        x: u16,
+        y: u16,
+        w: u16,
+    ) -> u16 {
+        let p = Self::build_paragaph(txt.to_string(), use_blue);
         let lines_needed = p.line_count(w) as u16 + DOUBLE_OFFSET;
         scroll_view.render_widget(p, Rect::new(x, y, w, lines_needed));
         lines_needed
