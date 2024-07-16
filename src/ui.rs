@@ -62,15 +62,24 @@ impl<'a> UI<'a> {
         }
     }
 
-    fn build_paragaph(text: String, use_blue: bool) -> Paragraph<'a> {
-        let style = if use_blue {
-            Style::new().blue()
+    fn build_paragaph(text: String, is_user: bool) -> Paragraph<'a> {
+        let (style, title) = if is_user {
+            (Style::new().blue(), "User")
         } else {
-            Style::new().yellow()
+            (Style::new().yellow(), "Assistant")
         };
         Paragraph::new(text.to_string())
             .wrap(Wrap { trim: true })
-            .block(Block::default().borders(Borders::ALL).border_style(style))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(style)
+                    .title(
+                        Title::from(title)
+                            .alignment(Alignment::Center)
+                            .position(Position::Top),
+                    ),
+            )
     }
 
     pub fn draw_ui(&mut self, frame: &mut Frame, message_history: &Vec<(String, String)>) {
@@ -118,13 +127,13 @@ impl<'a> UI<'a> {
 
     fn render_msg_bubble(
         txt: &str,
-        use_blue: bool,
+        is_user: bool,
         scroll_view: &mut ScrollView,
         x: u16,
         y: u16,
         w: u16,
     ) -> u16 {
-        let p = Self::build_paragaph(txt.to_string(), use_blue);
+        let p = Self::build_paragaph(txt.to_string(), is_user);
         let lines_needed = p.line_count(w) as u16 + DOUBLE_OFFSET;
         scroll_view.render_widget(p, Rect::new(x, y, w, lines_needed));
         lines_needed
