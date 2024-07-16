@@ -77,7 +77,7 @@ impl<'a> UI<'a> {
         let y = split[0].y;
 
         let box_width = ((w as f32) * 0.6) as u16;
-        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET - SINGLE_OFFSET, 200)); // FIXME: compute height
+        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET - SINGLE_OFFSET, h * 2)); // FIXME: compute height
 
         let mut last_line = 0;
         for (user, assistant) in message_history.iter() {

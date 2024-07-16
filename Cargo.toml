@@ -13,4 +13,4 @@ ratatui = { version = "0.26.3", features = ["unstable-rendered-line-info"] }
 tui-scrollview = "0.3.6"
 tui-textarea = "0.4.0"
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3", default-features = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

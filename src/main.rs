@@ -11,13 +11,15 @@ use env_logger;
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::io::{self, stdout, Stdout};
 use tracing;
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{filter::EnvFilter, fmt};
 
 fn main() -> io::Result<()> {
     env_logger::init();
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(tracing::Level::ERROR)
-        .finish();
+    let subscriber = if let Ok(env_filter) = EnvFilter::try_from_default_env() {
+        fmt().with_env_filter(env_filter).finish()
+    } else {
+        fmt().with_env_filter(EnvFilter::new("off")).finish()
+    };
 
     tracing::subscriber::set_global_default(subscriber)
         .expect("Setting the default subscriber failed!");
