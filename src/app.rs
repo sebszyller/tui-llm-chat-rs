@@ -37,41 +37,22 @@ impl<'a> App<'a> {
     }
 
     pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> io::Result<()> {
-        let mut generating = false;
-        let mut completions: Option<TokensToStrings<CompletionHandle>> = None;
         loop {
             let _ = terminal.draw(|frame| self.ui.draw_ui(frame, &self.state.message_history));
-            if generating {
-                if let Some(ref mut comp) = completions {
-                    match comp.next() {
-                        Some(partial_output) => self.state.add_assistant_msg(&partial_output),
-                        None => generating = false,
-                    }
-                } else {
-                    self.state
-                        .add_assistant_msg("Context is full; clear to continue!");
-                    generating = false
+            match self.state.model_state {
+                state::ModelState::Waiting => {
+                    let event = Self::key_as_event()?;
+                    let should_quit = self.process_event(event);
+                    if should_quit {
+                        break;
+                    };
                 }
-            } else {
-                match Self::key_as_event()? {
-                    AppEvent::Exit => break,
-                    AppEvent::Idle => continue,
-                    AppEvent::Clear => {
-                        self.llm.clear_session().expect("Failed to clear session!");
-                        self.state.clear();
-                        self.ui.clear_input();
-                    }
-                    AppEvent::KeyInput(key) => self.ui.update_text_area_state(key),
-                    AppEvent::Submit => {
-                        let input = self.ui.lines();
-                        self.ui.clear_input();
-                        self.state.add_user_msg(&input);
-                        completions = self.start_stream();
-                        generating = true;
-                    }
-                    AppEvent::ScrollUp => self.ui.scroll_up(),
-                    AppEvent::ScrollDown => self.ui.scroll_down(),
+                state::ModelState::ProcessingContext => {
+                    let completion_handle = self.start_stream();
+                    self.state.set_completion(completion_handle);
+                    self.state.now_generating();
                 }
+                state::ModelState::Generating => self.generate_next(),
             }
         }
         Ok(())
@@ -81,6 +62,41 @@ impl<'a> App<'a> {
         self.llm
             .prepare_completion_handle(&self.state.message_history)
             .ok()
+    }
+
+    fn generate_next(&mut self) {
+        if let Some(ref mut completion_handle) = self.state.completion_handle {
+            match completion_handle.next() {
+                Some(partial_output) => self.state.add_assistant_msg(&partial_output),
+                None => self.state.now_waiting(),
+            }
+        } else {
+            self.state
+                .add_assistant_msg("Context is full; clear to continue!");
+            self.state.now_waiting();
+        }
+    }
+
+    fn process_event(&mut self, e: AppEvent) -> bool {
+        match e {
+            AppEvent::Exit => return true,
+            AppEvent::Idle => return false,
+            AppEvent::Clear => {
+                self.llm.clear_session().expect("Failed to clear session!");
+                self.state.clear();
+                self.ui.clear_input();
+            }
+            AppEvent::KeyInput(key) => self.ui.update_text_area_state(key),
+            AppEvent::Submit => {
+                let input = self.ui.lines();
+                self.ui.clear_input();
+                self.state.add_user_msg(&input);
+                self.state.now_processing();
+            }
+            AppEvent::ScrollUp => self.ui.scroll_up(),
+            AppEvent::ScrollDown => self.ui.scroll_down(),
+        }
+        false
     }
 
     fn key_as_event() -> io::Result<AppEvent> {

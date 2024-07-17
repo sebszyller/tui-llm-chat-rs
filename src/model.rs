@@ -57,11 +57,6 @@ impl LLM {
         text
     }
 
-    pub fn clear_session(&mut self) -> Result<(), LlamaContextError> {
-        // self.session.truncate_context(0); // FIXME: something is wrong here
-        self.session.set_context("")
-    }
-
     pub fn prepare_completion_handle(
         &mut self,
         message_history: &Vec<(String, String)>,
@@ -80,5 +75,9 @@ impl LLM {
             .into_strings();
 
         Ok(completion_handle)
+    }
+
+    pub fn clear_session(&mut self) -> Result<(), LlamaContextError> {
+        self.session.set_context("")
     }
 }

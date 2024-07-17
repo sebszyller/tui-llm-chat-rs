@@ -11,7 +11,7 @@ pub struct UI<'a> {
     layout: Layout,
     scroll_view_state: ScrollViewState,
     text_area: TextArea<'a>,
-    chat_frame: Block<'a>,
+    chat_border: Block<'a>,
 }
 
 const SINGLE_OFFSET: u16 = 1;
@@ -39,7 +39,7 @@ impl<'a> UI<'a> {
                 .borders(Borders::ALL),
         );
 
-        let chat_frame = Block::default()
+        let chat_border = Block::default()
             .title(
                 Title::from(title)
                     .alignment(Alignment::Center)
@@ -58,28 +58,8 @@ impl<'a> UI<'a> {
             layout,
             scroll_view_state,
             text_area,
-            chat_frame,
+            chat_border,
         }
-    }
-
-    fn build_paragaph(text: String, is_user: bool) -> Paragraph<'a> {
-        let (style, title) = if is_user {
-            (Style::new().blue(), "User")
-        } else {
-            (Style::new().yellow(), "Assistant")
-        };
-        Paragraph::new(text.to_string())
-            .wrap(Wrap { trim: true })
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(style)
-                    .title(
-                        Title::from(title)
-                            .alignment(Alignment::Center)
-                            .position(Position::Top),
-                    ),
-            )
     }
 
     pub fn draw_ui(&mut self, frame: &mut Frame, message_history: &Vec<(String, String)>) {
@@ -91,7 +71,7 @@ impl<'a> UI<'a> {
         let y = split[0].y;
 
         let box_width = ((w as f32) * 0.6) as u16;
-        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET - SINGLE_OFFSET, h * 2)); // FIXME: compute height
+        let mut scroll_view = ScrollView::new(Size::new(w - DOUBLE_OFFSET - SINGLE_OFFSET, h * 2));
 
         let mut last_line = 0;
         for (user, assistant) in message_history.iter() {
@@ -116,13 +96,33 @@ impl<'a> UI<'a> {
             last_line = last_line + lines_needed;
         }
 
-        frame.render_widget(self.text_area.widget(), split[1]);
         frame.render_stateful_widget(
             scroll_view,
             Rect::new(x, y + SINGLE_OFFSET, w - DOUBLE_OFFSET, h - DOUBLE_OFFSET),
             &mut self.scroll_view_state,
         );
-        frame.render_widget(self.chat_frame.clone(), split[0]);
+        frame.render_widget(self.chat_border.clone(), split[0]);
+        frame.render_widget(self.text_area.widget(), split[1]);
+    }
+
+    fn build_paragaph(text: String, is_user: bool) -> Paragraph<'a> {
+        let (style, title) = if is_user {
+            (Style::new().blue(), "User")
+        } else {
+            (Style::new().yellow(), "LLM")
+        };
+        Paragraph::new(text.to_string())
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(style)
+                    .title(
+                        Title::from(title)
+                            .alignment(Alignment::Center)
+                            .position(Position::Top),
+                    ),
+            )
     }
 
     fn render_msg_bubble(
@@ -139,6 +139,13 @@ impl<'a> UI<'a> {
         lines_needed
     }
 
+    pub fn lines(&self) -> String {
+        self.text_area
+            .lines()
+            .iter()
+            .fold("".to_string(), |acc, line| format!("{acc} {line}\n"))
+    }
+
     pub fn update_text_area_state(&mut self, key: KeyEvent) {
         self.text_area.input(key);
     }
@@ -149,13 +156,6 @@ impl<'a> UI<'a> {
 
     pub fn scroll_down(&mut self) {
         self.scroll_view_state.scroll_page_down();
-    }
-
-    pub fn lines(&self) -> String {
-        self.text_area
-            .lines()
-            .iter()
-            .fold("".to_string(), |acc, line| format!("{acc} {line}\n"))
     }
 
     pub fn clear_input(&mut self) {
