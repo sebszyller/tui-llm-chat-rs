@@ -31,7 +31,11 @@ fn main() -> io::Result<()> {
     let max_new_tokens: &usize = &args.get_one::<usize>("max_new_tokens").unwrap_or(&2048);
     let inline_lines: &u16 = &args.get_one::<u16>("inline_lines").unwrap_or(&40);
 
-    let path_to_model = "mistral-7b-instruct-v0.2.Q5_K_M.gguf";
+    let default_path = "mistral-7b-instruct-v0.2.Q5_K_M.gguf".to_string();
+    let path_to_model: &str = &args
+        .get_one::<String>("path_to_model")
+        .unwrap_or(&default_path);
+
     let system = "You're a helpful chatbot that gives succint answers.";
 
     let llm = model::LLM::new(path_to_model, system, *temperature, *top_p, *max_new_tokens);
@@ -46,6 +50,14 @@ fn parse_args() -> Command {
         .version("0.1.0")
         .author("Sebastian Szyller")
         .about("Learning Rust with LLMs Capstone Project: TUI LLM Chat")
+        .arg(
+            Arg::new("path_to_model")
+                .required(false)
+                .long("path_to_model")
+                .value_name("PATH_TO_MODEL")
+                .value_parser(clap::value_parser!(String))
+                .help("Path to gguf file"),
+        )
         .arg(
             Arg::new("temperature")
                 .required(false)
