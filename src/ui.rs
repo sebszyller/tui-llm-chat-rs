@@ -20,7 +20,7 @@ const DOUBLE_OFFSET: u16 = SINGLE_OFFSET * 2;
 impl<'a> UI<'a> {
     pub fn init() -> UI<'a> {
         let title = "Mistral Instruct";
-        let controls = "Scroll: <PgUp/PgDn> | Submit: <Enter> | Clear: <Ctrl+X>";
+        let controls = "Scroll: < ↑/↓ > | Submit: <Enter> | Clear: <Ctrl+X>";
         let exit = "Quit: <Esc>";
 
         let layout = Layout::default()
@@ -144,11 +144,11 @@ impl<'a> UI<'a> {
     }
 
     pub fn scroll_up(&mut self) {
-        self.scroll_view_state.scroll_up();
+        self.scroll_view_state.scroll_page_up();
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll_view_state.scroll_down();
+        self.scroll_view_state.scroll_page_down();
     }
 
     pub fn lines(&self) -> String {
