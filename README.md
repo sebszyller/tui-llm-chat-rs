@@ -2,6 +2,9 @@
 
 Capstone project for my blog series on [Learning Rust with LLMs](https://sebszyller.com/blog/2024/rustwithllmsstart) (and the [series repo](https://github.com/sebszyller/rust-with-llms)).
 
+<img width="1602" alt="image" src="https://github.com/user-attachments/assets/3f12c024-46a7-436d-9ff4-3f4c0cd320b2">
+
+
 It's hardcoded for:
 - Mistral Instruct,
 - Termion terminals,
