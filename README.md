@@ -4,15 +4,15 @@ Capstone project for my blog series on [Learning Rust with LLMs](https://sebszyl
 
 <img width="1602" alt="image" src="https://github.com/user-attachments/assets/3f12c024-46a7-436d-9ff4-3f4c0cd320b2">
 
-
 It's hardcoded for:
 - Mistral Instruct,
-- Termion terminals,
+- Crossterm backend,
 - Apple Metal.
 
 ¯\\\_(ツ)\_/¯
 
 You can download the model from [hugginface](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF).
+I recommend `mistral-7b-instruct-v0.2.Q5_K_M.gguf`.
 Provide the path via CLI args, or just put it in the project root.
 
 `cargo run` should be enough.
